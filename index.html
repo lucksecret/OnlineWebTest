@@ -1,28 +1,41 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Online Assessment</title>
+  <title>Online Assessment System</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
   <div class="quiz-container">
-    <!-- Top Navigation Bar -->
+    <!-- Header -->
     <header class="quiz-header">
       <h2 id="app-title">Online Examination</h2>
       <div class="header-right">
-        <div id="timer-box" class="timer">Time: <span id="time">05:00</span></div>
+        <div id="warning-badge" class="badge warning-bg hidden">Peringatan: <span id="warning-count">0</span>/3</div>
+        <div id="timer-box" class="timer">Waktu: <span id="time">05:00</span></div>
         <button id="admin-login-btn" class="btn-sm">Admin</button>
       </div>
     </header>
 
     <!-- Start Screen -->
     <div id="start-screen" class="screen active">
-      <h3 id="test-welcome-title">Welcome to the Knowledge Test</h3>
-      <p id="test-welcome-desc">This test consists of multiple-choice questions. Click start when you are ready!</p>
-      <button id="start-btn" class="btn">Start Test</button>
+      <h3 id="test-welcome-title">Selamat Datang di Ujian Online</h3>
+      <p id="test-welcome-desc">Silakan isi identitas Anda sebelum memulai ujian. Soal dan pilihan jawaban akan diacak secara otomatis untuk setiap siswa.</p>
+      
+      <div class="identity-form">
+        <div class="form-group">
+          <label>Nama Lengkap:</label>
+          <input type="text" id="student-name" placeholder="Contoh: Budi Santoso">
+        </div>
+        <div class="form-group">
+          <label>NIM / Kelas:</label>
+          <input type="text" id="student-id" placeholder="Contoh: 12345678 / XII-RPL">
+        </div>
+      </div>
+
+      <button id="start-btn" class="btn">Mulai Ujian</button>
     </div>
 
     <!-- Question Screen -->
@@ -30,85 +43,165 @@
       <div class="progress-bar">
         <div id="progress" class="progress"></div>
       </div>
-      <div id="question-number" class="question-count">Question 1 of 5</div>
-      <h3 id="question-text">Question goes here...</h3>
+      <div id="question-number" class="question-count">Soal 1 dari 5</div>
+      
+      <!-- Teks & Gambar Soal -->
+      <h3 id="question-text">Teks Pertanyaan...</h3>
+      <div id="question-image-container" class="image-box hidden"></div>
 
+      <!-- Container Pilihan Jawaban -->
       <div id="options-container" class="options-grid"></div>
 
       <div class="footer-btns">
-        <button id="next-btn" class="btn" disabled>Next Question</button>
+        <button id="next-btn" class="btn" disabled>Soal Berikutnya</button>
       </div>
     </div>
 
     <!-- Result Screen -->
     <div id="result-screen" class="screen">
-      <h3>Test Completed!</h3>
-      <p>Here is your final score:</p>
+      <h3>Ujian Selesai!</h3>
+      <p id="finish-reason-text">Berikut adalah nilai akhir Anda:</p>
       <div class="score-badge">
         <span id="final-score">0</span> / <span id="total-score">0</span>
       </div>
       <p id="score-percentage" class="percentage"></p>
-      <button id="restart-btn" class="btn">Retake Test</button>
+      <button id="restart-btn" class="btn">Kembali ke Halaman Utama</button>
     </div>
 
     <!-- Admin Panel Screen -->
     <div id="admin-screen" class="screen">
       <div class="admin-header">
         <h3>⚙️ Admin Control Panel</h3>
-        <button id="close-admin-btn" class="btn-sm danger">Exit Admin</button>
+        <button id="close-admin-btn" class="btn-sm danger">Keluar Admin</button>
       </div>
 
-      <!-- Test Settings -->
-      <section class="admin-section">
-        <h4>1. Test Settings</h4>
-        <div class="form-group">
-          <label>Test Title:</label>
-          <input type="text" id="setting-title">
-        </div>
-        <div class="form-group">
-          <label>Time Limit (Minutes):</label>
-          <input type="number" id="setting-time" min="1" max="180">
-        </div>
-      </section>
-
-      <!-- Add New Question -->
-      <section class="admin-section">
-        <h4>2. Add New Question</h4>
-        <div class="form-group">
-          <label>Question Text:</label>
-          <input type="text" id="new-q-text" placeholder="Enter question...">
-        </div>
-        <div class="form-group grid-2">
-          <input type="text" id="new-opt-0" placeholder="Option 1">
-          <input type="text" id="new-opt-1" placeholder="Option 2">
-          <input type="text" id="new-opt-2" placeholder="Option 3">
-          <input type="text" id="new-opt-3" placeholder="Option 4">
-        </div>
-        <div class="form-group">
-          <label>Correct Option:</label>
-          <select id="new-q-correct">
-            <option value="0">Option 1</option>
-            <option value="1">Option 2</option>
-            <option value="2">Option 3</option>
-            <option value="3">Option 4</option>
-          </select>
-        </div>
-        <button id="add-q-btn" class="btn-sm success">+ Add Question</button>
-      </section>
-
-      <!-- Current Questions List -->
-      <section class="admin-section">
-        <h4>3. Existing Questions (<span id="q-count-label">0</span>)</h4>
-        <ul id="questions-list" class="q-list"></ul>
-      </section>
-
-      <!-- Save & Export Actions -->
-      <div class="admin-actions">
-        <button id="save-settings-btn" class="btn">Save Changes</button>
-        <button id="export-json-btn" class="btn-secondary">Export JSON Config</button>
+      <!-- Admin Nav Tabs -->
+      <div class="admin-tabs">
+        <button id="tab-btn-settings" class="tab-btn active">Pengaturan & Soal</button>
+        <button id="tab-btn-results" class="tab-btn">📊 Hasil & Rekap Nilai (<span id="submission-count-label">0</span>)</button>
       </div>
+
+      <!-- TAB 1: PENGATURAN & SOAL -->
+      <div id="admin-tab-settings" class="tab-content active">
+        <!-- Test Settings -->
+        <section class="admin-section">
+          <h4>1. Pengaturan Ujian</h4>
+          <div class="form-group">
+            <label>Judul Ujian:</label>
+            <input type="text" id="setting-title">
+          </div>
+          <div class="form-group">
+            <label>Batas Waktu (Menit):</label>
+            <input type="number" id="setting-time" min="1" max="180">
+          </div>
+        </section>
+
+        <!-- Form Tambah / Edit Soal -->
+        <section class="admin-section">
+          <h4 id="form-q-heading">2. Tambah Soal Baru</h4>
+          <div class="form-group">
+            <label>Teks Pertanyaan:</label>
+            <input type="text" id="new-q-text" placeholder="Masukkan teks pertanyaan...">
+          </div>
+
+          <div class="form-group">
+            <label>Gambar Soal (Opsional):</label>
+            <input type="file" id="new-q-img" accept="image/*">
+            <div id="preview-q-img" class="img-preview-box"></div>
+          </div>
+
+          <!-- Dynamic Options Section -->
+          <div class="form-group">
+            <label>Pilihan Jawaban (Pilih Radio Button untuk Kunci Jawaban Benar):</label>
+            <div id="dynamic-options-list" class="dynamic-options-container"></div>
+            <button id="add-option-field-btn" class="btn-sm secondary" style="margin-top: 8px;">+ Tambah Pilihan Jawaban</button>
+          </div>
+
+          <div class="btn-group-admin" style="margin-top: 15px;">
+            <button id="add-q-btn" class="btn-sm success">+ Tambah Soal</button>
+            <button id="cancel-edit-btn" class="btn-sm secondary hidden">Batal Edit</button>
+          </div>
+        </section>
+
+        <!-- Current Questions List -->
+        <section class="admin-section">
+          <h4>3. Daftar Soal (<span id="q-count-label">0</span>)</h4>
+          <ul id="questions-list" class="q-list"></ul>
+        </section>
+
+        <div class="admin-actions">
+          <button id="save-settings-btn" class="btn">Simpan Perubahan Pengaturan</button>
+          <button id="export-json-btn" class="btn-secondary">Export JSON Config</button>
+        </div>
+      </div>
+
+      <!-- TAB 2: REKAP HASIL & NILAI SISWA -->
+      <div id="admin-tab-results" class="tab-content">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <small>Total Peserta</small>
+            <h3 id="stat-total-students">0</h3>
+          </div>
+          <div class="stat-card">
+            <small>Rata-Rata Nilai</small>
+            <h3 id="stat-avg-score">0%</h3>
+          </div>
+          <div class="stat-card">
+            <small>Nilai Tertinggi</small>
+            <h3 id="stat-max-score">0%</h3>
+          </div>
+        </div>
+
+        <section class="admin-section">
+          <div class="table-header-actions">
+            <input type="text" id="search-student-input" placeholder="🔍 Cari nama / NIM..." style="width: 50%;">
+            <div class="btn-group-admin">
+              <button id="export-csv-btn" class="btn-sm success">📥 Excel (CSV)</button>
+              <button id="clear-results-btn" class="btn-sm danger">🗑️ Hapus Hasil</button>
+            </div>
+          </div>
+          
+          <div class="table-responsive">
+            <table class="results-table">
+              <thead>
+                <tr>
+                  <th>Waktu</th>
+                  <th>Nama Siswa</th>
+                  <th>NIM / Kelas</th>
+                  <th>Skor</th>
+                  <th>Violations</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="results-table-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
     </div>
 
+  </div>
+
+  <!-- Modal Peringatan Tab Switch -->
+  <div id="warning-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h3 class="warning-title">⚠️ PERINGATAN KECURANGAN!</h3>
+      <p id="modal-warning-msg">Anda terdeteksi berpindah tab/aplikasi!</p>
+      <button id="close-warning-btn" class="btn danger">Saya Mengerti</button>
+    </div>
+  </div>
+
+  <!-- Modal Detail Jawaban Siswa -->
+  <div id="detail-modal" class="modal-overlay hidden">
+    <div class="modal-content large">
+      <div class="admin-header">
+        <h3>📄 Detail Lembar Jawaban Siswa</h3>
+        <button id="close-detail-btn" class="btn-sm danger">Tutup</button>
+      </div>
+      <div id="detail-student-info" class="student-info-box"></div>
+      <div id="detail-answers-list" class="answers-review-list"></div>
+    </div>
   </div>
 
   <script src="script.js"></script>
