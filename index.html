@@ -6,10 +6,22 @@
   <title>Online Assessment System</title>
   <link rel="stylesheet" href="style.css">
 
-  <!-- KaTeX CDN untuk Render LaTeX / Rumus Matematika -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <!-- MathJax 3 Engine (Mendukung LaTeX Asli) -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        processEscapes: true
+      },
+      options: {
+        skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    };
+  </script>
+  <script type="text/javascript" id="MathJax-script" async
+    src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
 </head>
 <body>
 
@@ -27,7 +39,7 @@
     <!-- Start Screen -->
     <div id="start-screen" class="screen active">
       <h3 id="test-welcome-title">Selamat Datang di Ujian Online</h3>
-      <p id="test-welcome-desc">Ujian ini mendukung soal bergambar, rumus matematika (LaTeX), serta Pilihan Ganda Kompleks.</p>
+      <p id="test-welcome-desc">Silakan isi identitas Anda sebelum memulai ujian. Soal dan pilihan jawaban akan diacak secara otomatis untuk setiap siswa.</p>
       
       <div class="identity-form">
         <div class="form-group">
@@ -84,6 +96,7 @@
         <button id="close-admin-btn" class="btn-sm danger">Keluar Admin</button>
       </div>
 
+      <!-- Admin Nav Tabs -->
       <div class="admin-tabs">
         <button id="tab-btn-settings" class="tab-btn active">Pengaturan & Soal</button>
         <button id="tab-btn-results" class="tab-btn">📊 Hasil & Rekap Nilai (<span id="submission-count-label">0</span>)</button>
@@ -117,8 +130,8 @@
           </div>
 
           <div class="form-group">
-            <label>Teks Pertanyaan (Gunakan $...$ untuk LaTeX):</label>
-            <input type="text" id="new-q-text" placeholder="Contoh: Hitung nilai dari $\int_0^2 x^2 dx$">
+            <label>Teks Pertanyaan (Mendukung LaTeX Asli \(...\) atau $...$):</label>
+            <input type="text" id="new-q-text" placeholder="Contoh: Hitunglah hasil dari \(\int_0^2 x^2 \, dx\)">
           </div>
 
           <div class="form-group">
