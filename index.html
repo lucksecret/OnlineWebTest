@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Online Assessment</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="quiz-container">
+    <!-- Top Navigation Bar -->
+    <header class="quiz-header">
+      <h2 id="app-title">Online Examination</h2>
+      <div class="header-right">
+        <div id="timer-box" class="timer">Time: <span id="time">05:00</span></div>
+        <button id="admin-login-btn" class="btn-sm">Admin</button>
+      </div>
+    </header>
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="screen active">
+      <h3 id="test-welcome-title">Welcome to the Knowledge Test</h3>
+      <p id="test-welcome-desc">This test consists of multiple-choice questions. Click start when you are ready!</p>
+      <button id="start-btn" class="btn">Start Test</button>
+    </div>
+
+    <!-- Question Screen -->
+    <div id="quiz-screen" class="screen">
+      <div class="progress-bar">
+        <div id="progress" class="progress"></div>
+      </div>
+      <div id="question-number" class="question-count">Question 1 of 5</div>
+      <h3 id="question-text">Question goes here...</h3>
+
+      <div id="options-container" class="options-grid"></div>
+
+      <div class="footer-btns">
+        <button id="next-btn" class="btn" disabled>Next Question</button>
+      </div>
+    </div>
+
+    <!-- Result Screen -->
+    <div id="result-screen" class="screen">
+      <h3>Test Completed!</h3>
+      <p>Here is your final score:</p>
+      <div class="score-badge">
+        <span id="final-score">0</span> / <span id="total-score">0</span>
+      </div>
+      <p id="score-percentage" class="percentage"></p>
+      <button id="restart-btn" class="btn">Retake Test</button>
+    </div>
+
+    <!-- Admin Panel Screen -->
+    <div id="admin-screen" class="screen">
+      <div class="admin-header">
+        <h3>⚙️ Admin Control Panel</h3>
+        <button id="close-admin-btn" class="btn-sm danger">Exit Admin</button>
+      </div>
+
+      <!-- Test Settings -->
+      <section class="admin-section">
+        <h4>1. Test Settings</h4>
+        <div class="form-group">
+          <label>Test Title:</label>
+          <input type="text" id="setting-title">
+        </div>
+        <div class="form-group">
+          <label>Time Limit (Minutes):</label>
+          <input type="number" id="setting-time" min="1" max="180">
+        </div>
+      </section>
+
+      <!-- Add New Question -->
+      <section class="admin-section">
+        <h4>2. Add New Question</h4>
+        <div class="form-group">
+          <label>Question Text:</label>
+          <input type="text" id="new-q-text" placeholder="Enter question...">
+        </div>
+        <div class="form-group grid-2">
+          <input type="text" id="new-opt-0" placeholder="Option 1">
+          <input type="text" id="new-opt-1" placeholder="Option 2">
+          <input type="text" id="new-opt-2" placeholder="Option 3">
+          <input type="text" id="new-opt-3" placeholder="Option 4">
+        </div>
+        <div class="form-group">
+          <label>Correct Option:</label>
+          <select id="new-q-correct">
+            <option value="0">Option 1</option>
+            <option value="1">Option 2</option>
+            <option value="2">Option 3</option>
+            <option value="3">Option 4</option>
+          </select>
+        </div>
+        <button id="add-q-btn" class="btn-sm success">+ Add Question</button>
+      </section>
+
+      <!-- Current Questions List -->
+      <section class="admin-section">
+        <h4>3. Existing Questions (<span id="q-count-label">0</span>)</h4>
+        <ul id="questions-list" class="q-list"></ul>
+      </section>
+
+      <!-- Save & Export Actions -->
+      <div class="admin-actions">
+        <button id="save-settings-btn" class="btn">Save Changes</button>
+        <button id="export-json-btn" class="btn-secondary">Export JSON Config</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
