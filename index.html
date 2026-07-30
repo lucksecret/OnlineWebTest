@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Online Assessment System</title>
   <link rel="stylesheet" href="style.css">
+
+  <!-- KaTeX CDN untuk Render LaTeX / Rumus Matematika -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
 </head>
 <body>
 
@@ -22,7 +27,7 @@
     <!-- Start Screen -->
     <div id="start-screen" class="screen active">
       <h3 id="test-welcome-title">Selamat Datang di Ujian Online</h3>
-      <p id="test-welcome-desc">Silakan isi identitas Anda sebelum memulai ujian. Soal dan pilihan jawaban akan diacak secara otomatis untuk setiap siswa.</p>
+      <p id="test-welcome-desc">Ujian ini mendukung soal bergambar, rumus matematika (LaTeX), serta Pilihan Ganda Kompleks.</p>
       
       <div class="identity-form">
         <div class="form-group">
@@ -31,7 +36,7 @@
         </div>
         <div class="form-group">
           <label>NIM / Kelas:</label>
-          <input type="text" id="student-id" placeholder="Contoh: 12345678 / XII-RPL">
+          <input type="text" id="student-id" placeholder="Contoh: 12345678 / XII-MIPA">
         </div>
       </div>
 
@@ -43,8 +48,12 @@
       <div class="progress-bar">
         <div id="progress" class="progress"></div>
       </div>
-      <div id="question-number" class="question-count">Soal 1 dari 5</div>
       
+      <div class="q-screen-header">
+        <span id="question-number" class="question-count">Soal 1 dari 5</span>
+        <span id="question-type-tag" class="type-tag">Pilihan Ganda</span>
+      </div>
+
       <!-- Teks & Gambar Soal -->
       <h3 id="question-text">Teks Pertanyaan...</h3>
       <div id="question-image-container" class="image-box hidden"></div>
@@ -75,7 +84,6 @@
         <button id="close-admin-btn" class="btn-sm danger">Keluar Admin</button>
       </div>
 
-      <!-- Admin Nav Tabs -->
       <div class="admin-tabs">
         <button id="tab-btn-settings" class="tab-btn active">Pengaturan & Soal</button>
         <button id="tab-btn-results" class="tab-btn">📊 Hasil & Rekap Nilai (<span id="submission-count-label">0</span>)</button>
@@ -99,9 +107,18 @@
         <!-- Form Tambah / Edit Soal -->
         <section class="admin-section">
           <h4 id="form-q-heading">2. Tambah Soal Baru</h4>
+          
           <div class="form-group">
-            <label>Teks Pertanyaan:</label>
-            <input type="text" id="new-q-text" placeholder="Masukkan teks pertanyaan...">
+            <label>Tipe Soal:</label>
+            <select id="new-q-type">
+              <option value="single">Pilihan Ganda Biasa (1 Jawaban Benar)</option>
+              <option value="multiple">Pilihan Ganda Kompleks (Bisa >1 Jawaban Benar)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Teks Pertanyaan (Gunakan $...$ untuk LaTeX):</label>
+            <input type="text" id="new-q-text" placeholder="Contoh: Hitung nilai dari $\int_0^2 x^2 dx$">
           </div>
 
           <div class="form-group">
@@ -112,7 +129,7 @@
 
           <!-- Dynamic Options Section -->
           <div class="form-group">
-            <label>Pilihan Jawaban (Pilih Radio Button untuk Kunci Jawaban Benar):</label>
+            <label id="options-label-desc">Pilihan Jawaban (Tandai Kunci Jawaban Benar):</label>
             <div id="dynamic-options-list" class="dynamic-options-container"></div>
             <button id="add-option-field-btn" class="btn-sm secondary" style="margin-top: 8px;">+ Tambah Pilihan Jawaban</button>
           </div>
@@ -135,7 +152,7 @@
         </div>
       </div>
 
-      <!-- TAB 2: REKAP HASIL & NILAI SISWA -->
+      <!-- TAB 2: REKAP HASIL -->
       <div id="admin-tab-results" class="tab-content">
         <div class="stats-grid">
           <div class="stat-card">
@@ -183,7 +200,7 @@
 
   </div>
 
-  <!-- Modal Peringatan Tab Switch -->
+  <!-- Modal Peringatan -->
   <div id="warning-modal" class="modal-overlay hidden">
     <div class="modal-content">
       <h3 class="warning-title">⚠️ PERINGATAN KECURANGAN!</h3>
