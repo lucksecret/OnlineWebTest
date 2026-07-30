@@ -1,18 +1,32 @@
-// --- Default Configuration ---
+// --- Default Configuration (With LaTeX & Complex MC Samples) ---
 const DEFAULT_CONFIG = {
   adminPassword: "admin123",
   title: "Online Examination",
   timeLimitMinutes: 5,
   questions: [
     {
-      question: "Apa nama hewan pada gambar di bawah ini?",
+      type: "single", // Pilihan Ganda Biasa
+      question: "Berapakah hasil dari pecahan berikut $\\int_0^2 x^2 \\, dx$ ?",
       image: "",
       options: [
-        { text: "Kucing", image: "" },
-        { text: "Anjing", image: "" },
-        { text: "Burung", image: "" }
+        { text: "$\\frac{8}{3}$", image: "" },
+        { text: "$\\frac{4}{3}$", image: "" },
+        { text: "$2$", image: "" },
+        { text: "$4$", image: "" }
       ],
-      answer: 0
+      answer: 0 // Index tunggal
+    },
+    {
+      type: "multiple", // Pilihan Ganda Kompleks
+      question: "Manakah dari persamaan berikut yang memiliki akar real? (Pilih semua yang benar)",
+      image: "",
+      options: [
+        { text: "$x^2 - 4 = 0$", image: "" },
+        { text: "$x^2 + 4 = 0$", image: "" },
+        { text: "$x^2 - 5x + 6 = 0$", image: "" },
+        { text: "$x^2 + x + 1 = 0$", image: "" }
+      ],
+      answer: [0, 2] // Array index kunci jawaban
     }
   ]
 };
@@ -22,10 +36,10 @@ let config = JSON.parse(localStorage.getItem("quiz_config")) || DEFAULT_CONFIG;
 let submissions = JSON.parse(localStorage.getItem("quiz_submissions")) || [];
 
 // --- State Variables ---
-let sessionQuestions = []; // Stores randomized questions for current student
+let sessionQuestions = [];
 let currentQuestionIndex = 0;
 let score = 0;
-let selectedOption = null;
+let selectedOptions = []; // Array to store 1 or more choices
 let timer;
 let timeLeft = config.timeLimitMinutes * 60;
 
@@ -37,7 +51,8 @@ const MAX_WARNINGS = 3;
 let studentInfo = { name: "", id: "" };
 let userAnswers = [];
 
-// Admin State for Options
+// Admin State
+let adminCurrentType = "single";
 let adminCurrentOptions = [
   { text: "", image: "" },
   { text: "", image: "" }
@@ -72,9 +87,11 @@ const questionText = document.getElementById("question-text");
 const questionImageContainer = document.getElementById("question-image-container");
 const optionsContainer = document.getElementById("options-container");
 const questionNumber = document.getElementById("question-number");
+const questionTypeTag = document.getElementById("question-type-tag");
 const progressBar = document.getElementById("progress");
 const timeDisplay = document.getElementById("time");
 
+const newQTypeSelect = document.getElementById("new-q-type");
 const dynamicOptionsList = document.getElementById("dynamic-options-list");
 const addOptionFieldBtn = document.getElementById("add-option-field-btn");
 const newQImgInput = document.getElementById("new-q-img");
@@ -95,7 +112,22 @@ const closeDetailBtn = document.getElementById("close-detail-btn");
 
 // --- Helper Functions ---
 
-// Fisher-Yates Shuffle Algorithm
+// Render LaTeX Formulas using KaTeX
+function renderMath() {
+  if (window.renderMathInElement) {
+    renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false},
+        {left: '\\(', right: '\\)', display: false},
+        {left: '\\[', right: '\\]', display: true}
+      ],
+      throwOnError: false
+    });
+  }
+}
+
+// Fisher-Yates Shuffle
 function shuffleArray(array) {
   let arr = [...array];
   for (let i = arr.length - 1; i > 0; i--) {
@@ -105,7 +137,6 @@ function shuffleArray(array) {
   return arr;
 }
 
-// File to Base64 Converter
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -115,6 +146,14 @@ function fileToBase64(file) {
   });
 }
 
+function arraysEqual(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b)) return false;
+  if (a.length !== b.length) return false;
+  let sA = [...a].sort();
+  let sB = [...b].sort();
+  return sA.every((val, index) => val === sB[index]);
+}
+
 function applyConfigUI() {
   appTitle.textContent = config.title;
   document.getElementById("setting-title").value = config.title;
@@ -122,6 +161,7 @@ function applyConfigUI() {
   
   let mins = config.timeLimitMinutes.toString().padStart(2, '0');
   timeDisplay.textContent = `${mins}:00`;
+  setTimeout(renderMath, 100);
 }
 applyConfigUI();
 
@@ -131,28 +171,39 @@ nextBtn.addEventListener("click", handleNextQuestion);
 restartBtn.addEventListener("click", restartQuiz);
 
 function prepareRandomizedQuiz() {
-  // 1. Shuffle Questions
   let shuffledQuestions = shuffleArray(config.questions);
 
-  // 2. Shuffle Options for Each Question & Track Correct Answer
   sessionQuestions = shuffledQuestions.map(q => {
-    // Map options with their original correctness flag
+    let qType = q.type || "single";
+    let isCorrectCheck = (idx) => {
+      if (qType === "multiple") {
+        return Array.isArray(q.answer) && q.answer.includes(idx);
+      }
+      return idx === q.answer;
+    };
+
     let optionsMapped = q.options.map((opt, idx) => ({
       ...opt,
-      isCorrect: idx === q.answer
+      isCorrect: isCorrectCheck(idx)
     }));
 
-    // Shuffle the options
     let shuffledOptions = shuffleArray(optionsMapped);
 
-    // Find new correct index
-    let newCorrectIndex = shuffledOptions.findIndex(o => o.isCorrect);
+    let newCorrectAnswer;
+    if (qType === "multiple") {
+      newCorrectAnswer = shuffledOptions
+        .map((o, i) => o.isCorrect ? i : null)
+        .filter(i => i !== null);
+    } else {
+      newCorrectAnswer = shuffledOptions.findIndex(o => o.isCorrect);
+    }
 
     return {
+      type: qType,
       question: q.question,
       image: q.image,
       options: shuffledOptions,
-      answer: newCorrectIndex
+      answer: newCorrectAnswer
     };
   });
 }
@@ -171,7 +222,7 @@ function startQuiz() {
     return;
   }
 
-  prepareRandomizedQuiz(); // Acak Soal dan Pilihan per Siswa!
+  prepareRandomizedQuiz();
   
   studentInfo = { name: nameInput, id: idInput };
   userAnswers = [];
@@ -207,7 +258,7 @@ function startTimer() {
 }
 
 function loadQuestion() {
-  selectedOption = null;
+  selectedOptions = [];
   nextBtn.disabled = true;
 
   const q = sessionQuestions[currentQuestionIndex];
@@ -215,7 +266,14 @@ function loadQuestion() {
   progressBar.style.width = `${((currentQuestionIndex + 1) / sessionQuestions.length) * 100}%`;
   questionText.textContent = q.question;
 
-  // Render Question Image if exists
+  if (q.type === "multiple") {
+    questionTypeTag.textContent = "Pilihan Ganda Kompleks (Centang >1)";
+    questionTypeTag.className = "type-tag complex";
+  } else {
+    questionTypeTag.textContent = "Pilihan Ganda";
+    questionTypeTag.className = "type-tag";
+  }
+
   if (q.image) {
     questionImageContainer.innerHTML = `<img src="${q.image}" alt="Gambar Soal">`;
     questionImageContainer.classList.remove("hidden");
@@ -224,38 +282,60 @@ function loadQuestion() {
     questionImageContainer.classList.add("hidden");
   }
 
-  // Render Options (With Image Support)
   optionsContainer.innerHTML = "";
   q.options.forEach((option, index) => {
     const button = document.createElement("button");
     button.classList.add("option-btn");
     
+    let iconHtml = (q.type === "multiple") ? '<span class="option-checkbox-icon">✓</span>' : '';
     let optImgHtml = option.image ? `<img src="${option.image}" class="option-img" alt="Pilihan">` : '';
-    button.innerHTML = `${optImgHtml} <span>${option.text}</span>`;
+    button.innerHTML = `${iconHtml}${optImgHtml} <span>${option.text}</span>`;
 
-    button.addEventListener("click", () => selectOption(index, button));
+    button.addEventListener("click", () => selectOption(index, button, q.type));
     optionsContainer.appendChild(button);
   });
+
+  setTimeout(renderMath, 50);
 }
 
-function selectOption(index, buttonElement) {
-  selectedOption = index;
-  document.querySelectorAll(".option-btn").forEach(btn => btn.classList.remove("selected"));
-  buttonElement.classList.add("selected");
-  nextBtn.disabled = false;
+function selectOption(index, buttonElement, type) {
+  if (type === "multiple") {
+    // Toggle in array
+    if (selectedOptions.includes(index)) {
+      selectedOptions = selectedOptions.filter(i => i !== index);
+      buttonElement.classList.remove("selected");
+    } else {
+      selectedOptions.push(index);
+      buttonElement.classList.add("selected");
+    }
+  } else {
+    // Single Choice
+    selectedOptions = [index];
+    document.querySelectorAll(".option-btn").forEach(btn => btn.classList.remove("selected"));
+    buttonElement.classList.add("selected");
+  }
+
+  nextBtn.disabled = (selectedOptions.length === 0);
 }
 
 function handleNextQuestion() {
   const q = sessionQuestions[currentQuestionIndex];
-  const isCorrect = (selectedOption === q.answer);
+  let isCorrect = false;
+
+  if (q.type === "multiple") {
+    isCorrect = arraysEqual(selectedOptions, q.answer);
+  } else {
+    isCorrect = (selectedOptions[0] === q.answer);
+  }
 
   if (isCorrect) score++;
 
   userAnswers.push({
+    type: q.type,
     questionText: q.question,
     questionImage: q.image,
     options: q.options,
-    selectedOption: selectedOption,
+    selectedOptions: [...selectedOptions],
     correctOption: q.answer,
     isCorrect: isCorrect
   });
@@ -325,7 +405,7 @@ closeWarningBtn.addEventListener("click", () => {
   warningModal.classList.add("hidden");
 });
 
-// --- ADMIN PANEL & DYNAMIC OPTIONS FORM ---
+// --- ADMIN PANEL FUNCTIONS ---
 
 adminLoginBtn.addEventListener("click", () => {
   const pass = prompt("Masukkan Password Admin:");
@@ -348,28 +428,44 @@ function openAdminPanel() {
   renderAdminOptionsInputs();
   renderQuestionsList();
   renderResultsTable();
+  setTimeout(renderMath, 100);
 }
 
-// Render Dynamic Option Inputs in Admin Panel
-function renderAdminOptionsInputs(selectedCorrectIndex = 0) {
+newQTypeSelect.addEventListener("change", (e) => {
+  adminCurrentType = e.target.value;
+  renderAdminOptionsInputs();
+});
+
+function renderAdminOptionsInputs(selectedCorrect = null) {
   dynamicOptionsList.innerHTML = "";
+  const isMultiple = (adminCurrentType === "multiple");
 
   adminCurrentOptions.forEach((opt, idx) => {
     const row = document.createElement("div");
     row.className = "dynamic-option-row";
     
-    let isChecked = (idx === selectedCorrectIndex) ? 'checked' : '';
+    let isChecked = false;
+    if (isMultiple && Array.isArray(selectedCorrect)) {
+      isChecked = selectedCorrect.includes(idx);
+    } else if (!isMultiple) {
+      isChecked = (idx === (selectedCorrect !== null ? selectedCorrect : 0));
+    }
+
+    let inputType = isMultiple ? 'checkbox' : 'radio';
+    let inputName = isMultiple ? `admin-correct-opt-${idx}` : 'admin-correct-opt';
     let imgPreview = opt.image ? `<img src="${opt.image}" class="option-img" alt="Pilihan">` : '';
 
     row.innerHTML = `
-      <input type="radio" name="admin-correct-opt" value="${idx}" ${isChecked} title="Tandai sebagai jawaban benar">
-      <input type="text" value="${opt.text}" placeholder="Teks Pilihan ${idx + 1}" oninput="updateAdminOptText(${idx}, this.value)">
+      <input type="${inputType}" name="${inputName}" class="admin-opt-check" value="${idx}" ${isChecked ? 'checked' : ''} title="Tandai sebagai kunci jawaban benar">
+      <input type="text" value="${opt.text}" placeholder="Teks Pilihan ${idx + 1} (Gunakan $...$ untuk LaTeX)" oninput="updateAdminOptText(${idx}, this.value)">
       <input type="file" accept="image/*" onchange="uploadAdminOptImg(${idx}, this)" style="width: 130px; font-size:0.75rem;">
       ${imgPreview}
       ${adminCurrentOptions.length > 2 ? `<button type="button" class="btn-sm danger" onclick="removeAdminOption(${idx})">✕</button>` : ''}
     `;
     dynamicOptionsList.appendChild(row);
   });
+  
+  setTimeout(renderMath, 50);
 }
 
 window.updateAdminOptText = function(index, text) {
@@ -385,7 +481,7 @@ window.uploadAdminOptImg = async function(index, inputElement) {
 
 window.removeAdminOption = function(index) {
   adminCurrentOptions.splice(index, 1);
-  renderAdminOptionsInputs(0);
+  renderAdminOptionsInputs();
 };
 
 addOptionFieldBtn.addEventListener("click", () => {
@@ -394,14 +490,23 @@ addOptionFieldBtn.addEventListener("click", () => {
 });
 
 function getSelectedCorrectIndex() {
-  const radios = document.getElementsByName("admin-correct-opt");
-  for (let i = 0; i < radios.length; i++) {
-    if (radios[i].checked) return i;
+  const isMultiple = (adminCurrentType === "multiple");
+  const checks = document.querySelectorAll(".admin-opt-check");
+  
+  if (isMultiple) {
+    let selected = [];
+    checks.forEach((c, idx) => {
+      if (c.checked) selected.push(idx);
+    });
+    return selected;
+  } else {
+    for (let i = 0; i < checks.length; i++) {
+      if (checks[i].checked) return i;
+    }
+    return 0;
   }
-  return 0;
 }
 
-// Question Image File Handler
 newQImgInput.addEventListener("change", async (e) => {
   if (e.target.files && e.target.files[0]) {
     adminQuestionImage = await fileToBase64(e.target.files[0]);
@@ -409,29 +514,26 @@ newQImgInput.addEventListener("change", async (e) => {
   }
 });
 
-// Save / Add Question
 addQBtn.addEventListener("click", () => {
   const qText = document.getElementById("new-q-text").value.trim();
-  const correctIdx = getSelectedCorrectIndex();
+  const correctVal = getSelectedCorrectIndex();
 
   if (!qText) {
     alert("Harap isi pertanyaan terlebih dahulu!");
     return;
   }
 
-  // Validate options
-  for (let opt of adminCurrentOptions) {
-    if (!opt.text && !opt.image) {
-      alert("Setiap pilihan jawaban harus memiliki teks atau gambar!");
-      return;
-    }
+  if (adminCurrentType === "multiple" && (!Array.isArray(correctVal) || correctVal.length === 0)) {
+    alert("Untuk Pilihan Ganda Kompleks, pilih minimal 1 kunci jawaban benar!");
+    return;
   }
 
   const newQuestionData = {
+    type: adminCurrentType,
     question: qText,
     image: adminQuestionImage,
     options: [...adminCurrentOptions],
-    answer: correctIdx
+    answer: correctVal
   };
 
   if (editingIndex !== null) {
@@ -448,6 +550,9 @@ addQBtn.addEventListener("click", () => {
 window.editQuestion = function(index) {
   editingIndex = index;
   const q = config.questions[index];
+
+  adminCurrentType = q.type || "single";
+  newQTypeSelect.value = adminCurrentType;
 
   document.getElementById("form-q-heading").textContent = `2. Edit Soal #${index + 1}`;
   document.getElementById("new-q-text").value = q.question;
@@ -468,6 +573,8 @@ cancelEditBtn.addEventListener("click", resetForm);
 
 function resetForm() {
   editingIndex = null;
+  adminCurrentType = "single";
+  newQTypeSelect.value = "single";
   adminQuestionImage = "";
   previewQImg.innerHTML = "";
   newQImgInput.value = "";
@@ -502,8 +609,9 @@ function renderQuestionsList() {
   config.questions.forEach((q, idx) => {
     const li = document.createElement("li");
     li.className = "q-item";
+    let typeLabel = (q.type === "multiple") ? '[Kompleks]' : '[Biasa]';
     li.innerHTML = `
-      <span><strong>Q${idx + 1}:</strong> ${q.question} (${q.options.length} Pilihan) ${q.image ? '🖼️' : ''}</span>
+      <span><strong>Q${idx + 1} ${typeLabel}:</strong> ${q.question}</span>
       <div class="q-actions">
         <button class="btn-sm warning" onclick="editQuestion(${idx})">Edit</button>
         <button class="btn-sm danger" onclick="deleteQuestion(${idx})">Hapus</button>
@@ -511,6 +619,7 @@ function renderQuestionsList() {
     `;
     list.appendChild(li);
   });
+  setTimeout(renderMath, 100);
 }
 
 // Admin Tabs Navigation
@@ -589,8 +698,8 @@ window.viewDetailResult = function(index) {
       
       let optionsHtml = "";
       ans.options.forEach((opt, optIdx) => {
-        let isSelected = (optIdx === ans.selectedOption);
-        let isCorrectKey = (optIdx === ans.correctOption);
+        let isSelected = Array.isArray(ans.selectedOptions) ? ans.selectedOptions.includes(optIdx) : false;
+        let isCorrectKey = Array.isArray(ans.correctOption) ? ans.correctOption.includes(optIdx) : (optIdx === ans.correctOption);
 
         let optClass = "review-opt";
         if (isCorrectKey) optClass += " is-correct";
@@ -600,8 +709,9 @@ window.viewDetailResult = function(index) {
         optionsHtml += `<div class="${optClass}">${isSelected ? '👉 ' : ''}${optImg} ${opt.text} ${isCorrectKey ? ' (Kunci)' : ''}</div>`;
       });
 
+      let typeBadge = (ans.type === "multiple") ? '[PG Kompleks]' : '[PG Biasa]';
       card.innerHTML = `
-        <p><strong>Soal ${i + 1}:</strong> ${ans.questionText}</p>
+        <p><strong>Soal ${i + 1} ${typeBadge}:</strong> ${ans.questionText}</p>
         ${ans.questionImage ? `<div class="image-box"><img src="${ans.questionImage}" style="max-height:120px;"></div>` : ''}
         <div>${optionsHtml}</div>
       `;
@@ -610,6 +720,7 @@ window.viewDetailResult = function(index) {
   }
 
   detailModal.classList.remove("hidden");
+  setTimeout(renderMath, 50);
 };
 
 closeDetailBtn.addEventListener("click", () => detailModal.classList.add("hidden"));
