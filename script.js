@@ -1,32 +1,32 @@
-// --- Default Configuration (With LaTeX & Complex MC Samples) ---
+// --- Default Configuration (With Native LaTeX & Complex MC) ---
 const DEFAULT_CONFIG = {
   adminPassword: "admin123",
   title: "Online Examination",
   timeLimitMinutes: 5,
   questions: [
     {
-      type: "single", // Pilihan Ganda Biasa
-      question: "Berapakah hasil dari pecahan berikut $\\int_0^2 x^2 \\, dx$ ?",
+      type: "single",
+      question: "Sebuah peluru dengan kecepatan \\(40\\text{ m s}^{-1}\\) dan sudut elevasi \\(60^{\\circ}\\). Jika percepatan gravitasi bumi \\(10\\text{ m s}^{-2}\\) maka pernyataan yang salah adalah ....",
       image: "",
       options: [
-        { text: "$\\frac{8}{3}$", image: "" },
-        { text: "$\\frac{4}{3}$", image: "" },
-        { text: "$2$", image: "" },
-        { text: "$4$", image: "" }
+        { text: "Tinggi maksimum yang dicapai peluru \\(40\\sqrt{3}\\text{ m}\\)", image: "" },
+        { text: "Waktu naik sama dengan waktu turun", image: "" },
+        { text: "Perbandingan tinggi maksimum dan jangkauan terjauh peluru adalah \\(\\frac{4}{\\sqrt{3}}\\)", image: "" },
+        { text: "Di titik tertinggi kecepatannya \\(20\\text{ m s}^{-1}\\)", image: "" }
       ],
-      answer: 0 // Index tunggal
+      answer: 0
     },
     {
-      type: "multiple", // Pilihan Ganda Kompleks
+      type: "multiple",
       question: "Manakah dari persamaan berikut yang memiliki akar real? (Pilih semua yang benar)",
       image: "",
       options: [
-        { text: "$x^2 - 4 = 0$", image: "" },
-        { text: "$x^2 + 4 = 0$", image: "" },
-        { text: "$x^2 - 5x + 6 = 0$", image: "" },
-        { text: "$x^2 + x + 1 = 0$", image: "" }
+        { text: "\\(x^2 - 4 = 0\\)", image: "" },
+        { text: "\\(x^2 + 4 = 0\\)", image: "" },
+        { text: "\\(x^2 - 5x + 6 = 0\\)", image: "" },
+        { text: "\\(x^2 + x + 1 = 0\\)", image: "" }
       ],
-      answer: [0, 2] // Array index kunci jawaban
+      answer: [0, 2]
     }
   ]
 };
@@ -39,7 +39,7 @@ let submissions = JSON.parse(localStorage.getItem("quiz_submissions")) || [];
 let sessionQuestions = [];
 let currentQuestionIndex = 0;
 let score = 0;
-let selectedOptions = []; // Array to store 1 or more choices
+let selectedOptions = [];
 let timer;
 let timeLeft = config.timeLimitMinutes * 60;
 
@@ -110,22 +110,23 @@ const searchInput = document.getElementById("search-student-input");
 const detailModal = document.getElementById("detail-modal");
 const closeDetailBtn = document.getElementById("close-detail-btn");
 
-// --- Helper Functions ---
+// --- HELPER FUNCTIONS ---
 
-// Render LaTeX Formulas using KaTeX
+// Auto-Fix LaTeX Spaces (Perbaiki \ ( menjadi \()
+function cleanLatexText(text) {
+  if (!text) return "";
+  return text.replace(/\\\s+\(/g, '\\(').replace(/\\\s+\)/g, '\\)');
+}
+
+// Render MathJax 3 Engine
 function renderMath() {
-  if (window.renderMathInElement) {
-    renderMathInElement(document.body, {
-      delimiters: [
-        {left: '$$', right: '$$', display: true},
-        {left: '$', right: '$', display: false},
-        {left: '\\(', right: '\\)', display: false},
-        {left: '\\[', right: '\\]', display: true}
-      ],
-      throwOnError: false
-    });
+  if (window.MathJax && window.MathJax.typesetPromise) {
+    MathJax.typesetPromise().catch((err) => console.log("MathJax error:", err));
   }
 }
+
+// Interval Render MathJax otomatis
+setInterval(renderMath, 600);
 
 // Fisher-Yates Shuffle
 function shuffleArray(array) {
@@ -264,7 +265,9 @@ function loadQuestion() {
   const q = sessionQuestions[currentQuestionIndex];
   questionNumber.textContent = `Soal ${currentQuestionIndex + 1} dari ${sessionQuestions.length}`;
   progressBar.style.width = `${((currentQuestionIndex + 1) / sessionQuestions.length) * 100}%`;
-  questionText.textContent = q.question;
+  
+  // Apply Clean LaTeX
+  questionText.innerHTML = cleanLatexText(q.question);
 
   if (q.type === "multiple") {
     questionTypeTag.textContent = "Pilihan Ganda Kompleks (Centang >1)";
@@ -289,18 +292,19 @@ function loadQuestion() {
     
     let iconHtml = (q.type === "multiple") ? '<span class="option-checkbox-icon">✓</span>' : '';
     let optImgHtml = option.image ? `<img src="${option.image}" class="option-img" alt="Pilihan">` : '';
-    button.innerHTML = `${iconHtml}${optImgHtml} <span>${option.text}</span>`;
+    
+    let cleanOpt = cleanLatexText(option.text);
+    button.innerHTML = `${iconHtml}${optImgHtml} <span>${cleanOpt}</span>`;
 
     button.addEventListener("click", () => selectOption(index, button, q.type));
     optionsContainer.appendChild(button);
   });
 
-  setTimeout(renderMath, 50);
+  renderMath();
 }
 
 function selectOption(index, buttonElement, type) {
   if (type === "multiple") {
-    // Toggle in array
     if (selectedOptions.includes(index)) {
       selectedOptions = selectedOptions.filter(i => i !== index);
       buttonElement.classList.remove("selected");
@@ -309,7 +313,6 @@ function selectOption(index, buttonElement, type) {
       buttonElement.classList.add("selected");
     }
   } else {
-    // Single Choice
     selectedOptions = [index];
     document.querySelectorAll(".option-btn").forEach(btn => btn.classList.remove("selected"));
     buttonElement.classList.add("selected");
@@ -428,7 +431,7 @@ function openAdminPanel() {
   renderAdminOptionsInputs();
   renderQuestionsList();
   renderResultsTable();
-  setTimeout(renderMath, 100);
+  renderMath();
 }
 
 newQTypeSelect.addEventListener("change", (e) => {
@@ -457,7 +460,7 @@ function renderAdminOptionsInputs(selectedCorrect = null) {
 
     row.innerHTML = `
       <input type="${inputType}" name="${inputName}" class="admin-opt-check" value="${idx}" ${isChecked ? 'checked' : ''} title="Tandai sebagai kunci jawaban benar">
-      <input type="text" value="${opt.text}" placeholder="Teks Pilihan ${idx + 1} (Gunakan $...$ untuk LaTeX)" oninput="updateAdminOptText(${idx}, this.value)">
+      <input type="text" value="${opt.text}" placeholder="Teks Pilihan ${idx + 1}" oninput="updateAdminOptText(${idx}, this.value)">
       <input type="file" accept="image/*" onchange="uploadAdminOptImg(${idx}, this)" style="width: 130px; font-size:0.75rem;">
       ${imgPreview}
       ${adminCurrentOptions.length > 2 ? `<button type="button" class="btn-sm danger" onclick="removeAdminOption(${idx})">✕</button>` : ''}
@@ -465,7 +468,7 @@ function renderAdminOptionsInputs(selectedCorrect = null) {
     dynamicOptionsList.appendChild(row);
   });
   
-  setTimeout(renderMath, 50);
+  renderMath();
 }
 
 window.updateAdminOptText = function(index, text) {
@@ -610,8 +613,9 @@ function renderQuestionsList() {
     const li = document.createElement("li");
     li.className = "q-item";
     let typeLabel = (q.type === "multiple") ? '[Kompleks]' : '[Biasa]';
+    let cleanQText = cleanLatexText(q.question);
     li.innerHTML = `
-      <span><strong>Q${idx + 1} ${typeLabel}:</strong> ${q.question}</span>
+      <span><strong>Q${idx + 1} ${typeLabel}:</strong> ${cleanQText}</span>
       <div class="q-actions">
         <button class="btn-sm warning" onclick="editQuestion(${idx})">Edit</button>
         <button class="btn-sm danger" onclick="deleteQuestion(${idx})">Hapus</button>
@@ -619,7 +623,7 @@ function renderQuestionsList() {
     `;
     list.appendChild(li);
   });
-  setTimeout(renderMath, 100);
+  renderMath();
 }
 
 // Admin Tabs Navigation
@@ -706,12 +710,14 @@ window.viewDetailResult = function(index) {
         else if (isSelected && !ans.isCorrect) optClass += " is-wrong";
 
         let optImg = opt.image ? `<img src="${opt.image}" class="option-img" alt="Pilihan">` : '';
-        optionsHtml += `<div class="${optClass}">${isSelected ? '👉 ' : ''}${optImg} ${opt.text} ${isCorrectKey ? ' (Kunci)' : ''}</div>`;
+        let cleanOptText = cleanLatexText(opt.text);
+        optionsHtml += `<div class="${optClass}">${isSelected ? '👉 ' : ''}${optImg} ${cleanOptText} ${isCorrectKey ? ' (Kunci)' : ''}</div>`;
       });
 
       let typeBadge = (ans.type === "multiple") ? '[PG Kompleks]' : '[PG Biasa]';
+      let cleanQText = cleanLatexText(ans.questionText);
       card.innerHTML = `
-        <p><strong>Soal ${i + 1} ${typeBadge}:</strong> ${ans.questionText}</p>
+        <p><strong>Soal ${i + 1} ${typeBadge}:</strong> ${cleanQText}</p>
         ${ans.questionImage ? `<div class="image-box"><img src="${ans.questionImage}" style="max-height:120px;"></div>` : ''}
         <div>${optionsHtml}</div>
       `;
@@ -720,7 +726,7 @@ window.viewDetailResult = function(index) {
   }
 
   detailModal.classList.remove("hidden");
-  setTimeout(renderMath, 50);
+  renderMath();
 };
 
 closeDetailBtn.addEventListener("click", () => detailModal.classList.add("hidden"));
